@@ -4,17 +4,14 @@ class MARCModel < ASpaceExport::ExportModel
   include JSONModel
 
 
-<<<<<<< HEAD
-
-=======
-  @resource_map = {
+@resource_map = {
     [:id_0, :id_1, :id_2, :id_3] => :handle_id,
     :ead_location => :handle_ead_loc,
     :notes => :handle_notes,
     :uri => :handle_uri,
     :finding_aid_description_rules => df_handler('fadr', '040', ' ', ' ', 'e')
-  }
->>>>>>> 520
+}
+
 
   def self.from_resource(obj, opts={})
     marc = self.from_archival_object(obj,opts)
