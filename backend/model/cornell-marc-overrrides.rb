@@ -4,7 +4,13 @@ class MARCModel < ASpaceExport::ExportModel
   include JSONModel
 
 
-
+  @resource_map = {
+    [:id_0, :id_1, :id_2, :id_3] => :handle_id,
+    :ead_location => :handle_ead_loc,
+    :notes => :handle_notes,
+    :uri => :handle_uri,
+    :finding_aid_description_rules => df_handler('fadr', '040', ' ', ' ', 'e')
+  }
 
   def self.from_resource(obj, opts={})
     marc = self.from_archival_object(obj,opts)
@@ -31,6 +37,10 @@ class MARCModel < ASpaceExport::ExportModel
      string	
   end
 
+  #send aspace uri to voyager
+  def handle_uri(uri)
+    df('035', ' ', ' ').with_sfs(['a',"(aspace)" + uri])
+  end
 
   def handle_repo_code(repository,langcode)
   
@@ -59,6 +69,7 @@ end
 def handle_id(*ids)
   ids.reject!{|i| i.nil? || i.empty?}
   df('099', ' ', '9').with_sfs(['a', ids.join('.')])
+ 
 end
 
 def handle_notes(notes)
