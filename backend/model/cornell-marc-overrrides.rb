@@ -8,15 +8,15 @@ class MARCModel < ASpaceExport::ExportModel
     [:id_0, :id_1, :id_2, :id_3] => :handle_id,
     :ead_location => :handle_ead_loc,
     :notes => :handle_notes,
-    :uri => :handle_uri,
-    :finding_aid_description_rules => df_handler('fadr', '040', ' ', ' ', 'e')
+    :finding_aid_description_rules => df_handler('fadr', '040', ' ', ' ', 'e'),
+    :id_0 => :handle_voyager_id
 }
 
 
   def self.from_resource(obj, opts={})
     marc = self.from_archival_object(obj,opts)
     marc.apply_map(obj, @resource_map)
-    marc.leader_string = "00000cp$ aa2200000 a 4500"
+    marc.leader_string = "00000cp$aa2200000 a 4500"
     marc.leader_string[7] = obj.level == 'item' ? 'm' : 'c'
 
     marc.controlfield_string = assemble_controlfield_string(obj)
@@ -38,10 +38,6 @@ class MARCModel < ASpaceExport::ExportModel
      string	
   end
 
-  #send aspace uri to voyager
-  def handle_uri(uri)
-    df('035', ' ', ' ').with_sfs(['a',"(aspace)" + uri])
-  end
 
   def handle_repo_code(repository,langcode)
   
@@ -53,6 +49,9 @@ def handle_language(langcode)
   #blocks output of 041
 end
 
+def handle_voyager_id(id_0)
+  df('035', ' ', ' ').with_sfs(['a',"(CULAspace)" + id_0])
+end
 
 
 def handle_extents(extents)
