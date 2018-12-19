@@ -253,7 +253,84 @@ end
 end
 
 
+def handle_primary_creator(linked_agents)
+  link = linked_agents.find{|a| a['role'] == 'creator'}
+  return nil unless link
+  return nil unless link["_resolved"]["publish"] || @include_unpublished
 
+  creator = link['_resolved']
+  name = creator['display_name']
+
+  ind2 = ' '
+  role_info = link['relator'] && link['relator'].length == 3  ? ['4', link['relator']] : ['e', link['relator']]
+
+  case creator['agent_type']
+
+  when 'agent_corporate_entity'
+    code = '110'
+    ind1 = '2'
+    sfs = gather_agent_corporate_subfield_mappings(name, role_info, creator)
+
+  when 'agent_person'
+    ind1  = name['name_order'] == 'direct' ? '0' : '1'
+    code = '100'
+    sfs = gather_agent_person_subfield_mappings(name, role_info, creator)
+
+  when 'agent_family'
+    code = '100'
+    ind1 = '3'
+    sfs = gather_agent_family_subfield_mappings(name, role_info, creator)
+
+  end
+
+  df(code, ind1, ind2).with_sfs(*sfs)
+end
+
+# TODO: DRY this up
+# this method is very similair to handle_primary_creator and handle_agents
+def handle_other_creators(linked_agents)
+  creators = linked_agents.select{|a| a['role'] == 'creator'}[1..-1] || []
+  creators = creators + linked_agents.select{|a| a['role'] == 'source'}
+
+  creators.each do |link|
+    next unless link["_resolved"]["publish"] || @include_unpublished
+
+    creator = link['_resolved']
+    name = creator['display_name']
+    relator = link['relator']
+    terms = link['terms']
+    role = link['role']
+
+    if role == 'source'
+      relator_sf =  ['e', 'former owner']
+    else
+      relator_sf = ['e', relator]
+    end
+
+    ind2 = ' '
+
+    case creator['agent_type']
+
+    when 'agent_corporate_entity'
+      code = '710'
+      ind1 = '2'
+      sfs = gather_agent_corporate_subfield_mappings(name, relator_sf, creator)
+   
+    when 'agent_person'
+      ind1  = name['name_order'] == 'direct' ? '0' : '1'
+      code = '700'
+      sfs = gather_agent_person_subfield_mappings(name, relator_sf, creator)
+
+    when 'agent_family'
+      ind1 = '3'
+      code = '700'
+      sfs = gather_agent_family_subfield_mappings(name, relator_sf, creator)
+
+    end
+
+    df(code, ind1, ind2).with_sfs(*sfs)
+  end
+end
 
 
 
