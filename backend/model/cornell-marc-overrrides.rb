@@ -34,7 +34,7 @@ class MARCModel < ASpaceExport::ExportModel
     string += "nyu"	
     18.times { string += ' ' }	
     string += (obj.language || '|||')	
-    string += ' d'	
+    string += 'd'	
      string	
   end
 
