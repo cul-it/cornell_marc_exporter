@@ -9,7 +9,8 @@ class MARCModel < ASpaceExport::ExportModel
     :ead_location => :handle_ead_loc,
     :notes => :handle_notes,
     :finding_aid_description_rules => df_handler('fadr', '040', ' ', ' ', 'e'),
-    :id_0 => :handle_voyager_id
+    :id_0 => :handle_voyager_id,
+    :id => :handle_ref
 }
 
 
@@ -52,6 +53,9 @@ def handle_voyager_id(id_0)
   df('035', ' ', ' ').with_sfs(['a',"(CULAspace)" + id_0])
 end
 
+def handle_ref(id)
+  df('035', ' ', ' ').with_sfs(['a',"(CULAspaceURI)" + id.to_s])
+end
 
 def handle_extents(extents)
   extents.each do |ext|
