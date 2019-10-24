@@ -6,11 +6,11 @@ class MARCModel < ASpaceExport::ExportModel
 
 @resource_map = {
     [:id_0, :id_1, :id_2, :id_3] => :handle_id,
-    :ead_location => :handle_ead_loc,
     :notes => :handle_notes,
     :finding_aid_description_rules => df_handler('fadr', '040', ' ', ' ', 'e'),
     :id_0 => :handle_voyager_id,
-    :id => :handle_ref
+    :id => :handle_ref,
+    [:finding_aid_status,:ead_id] => :handle_ead_loc
 }
 
 
@@ -37,6 +37,18 @@ class MARCModel < ASpaceExport::ExportModel
     string += ' d'	
      string	
   end
+
+  def handle_ead_loc(finding_aid_status,ead_id)
+    if ead_id && !ead_id.empty?
+      if finding_aid_status && finding_aid_status == "completed"
+      df('856', '4', '2').with_sfs(
+                                    ['z', "Finding aid"],
+                                    ['u', "http://resolver.library.cornell.edu/cgi-bin/EADresolver?id=" + ead_id]
+                                  )
+      end
+    end
+  end
+
 
 
   def handle_repo_code(repository,langcode)
