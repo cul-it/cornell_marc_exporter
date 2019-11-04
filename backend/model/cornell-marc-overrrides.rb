@@ -42,7 +42,7 @@ class MARCModel < ASpaceExport::ExportModel
     if ead_id && !ead_id.empty?
       if finding_aid_status && finding_aid_status == "completed"
       df('856', '4', '2').with_sfs(
-                                    ['z', "Finding aid"],
+                                    ['3', "Finding aid"],
                                     ['u', "http://resolver.library.cornell.edu/cgi-bin/EADresolver?id=" + ead_id]
                                   )
       end
