@@ -53,7 +53,7 @@ class MARCModel < ASpaceExport::ExportModel
 
   def handle_repo_code(repository,langcode)
   
-    df('040', ' ', ' ').with_sfs(['a', 'NIC'], ['b', langcode],['c', 'NIC'])
+    df('040', ' ', ' ').with_sfs(['a', 'NIC'], ['b', 'eng'],['c', 'NIC'])
 
   end
 
