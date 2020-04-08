@@ -32,8 +32,14 @@ class MARCModel < ASpaceExport::ExportModel
     string += date['begin'] ? date['begin'][0..3] : "    "	
     string += date['end'] ? date['end'][0..3] : "    "	
     string += "nyu"	
+
+    lang_materials = obj.lang_materials
+    languages = lang_materials.map{|l| l['language_and_script']}.compact
+    langcode = languages.count == 1 ? languages[0]['language'] : 'mul'
+
+
     (35-(string.length)).times { string += ' ' }	
-    string += (obj.language || '|||')	
+    string += (langcode || '|||')	
     string += ' d'	
      string	
   end
