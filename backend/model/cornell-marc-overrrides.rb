@@ -25,17 +25,24 @@ class MARCModel < ASpaceExport::ExportModel
     marc
   end
 
-  def self.assemble_controlfield_string(obj)	
-    date = obj.dates[0] || {}	
-    string = obj['system_mtime'].scan(/\d{2}/)[1..3].join('')	
-    string += date['date_type'] == 'single' ? 's' : 'i'    
-    string += date['begin'] ? date['begin'][0..3] : "    "	
-    string += date['end'] ? date['end'][0..3] : "    "	
-    string += "nyu"	
-    (35-(string.length)).times { string += ' ' }	
-    string += (obj.language || '|||')	
-    string += ' d'	
-     string	
+  def self.assemble_controlfield_string(obj)
+    date = obj.dates[0] || {}
+    string = obj['system_mtime'].scan(/\d{2}/)[1..3].join('')
+    string += date['date_type'] == 'single' ? 's' : 'i'
+    string += date['begin'] ? date['begin'][0..3] : "    "
+    string += date['end'] ? date['end'][0..3] : "    "
+    string += "nyu"
+    # If only one Language and Script subrecord its code value should be exported in the MARC 008 field position 35-37; If more than one Language and Script subrecord is recorded, a value of "mul" should be exported in the MARC 008 field position 35-37.
+    lang_materials = obj.lang_materials
+    languages = lang_materials.map {|l| l['language_and_script']}.compact
+    langcode = languages.count == 1 ? languages[0]['language'] : 'eng'
+
+    # variable number of spaces needed since country code could have 2 or 3 chars
+    (35-(string.length)).times { string += ' ' }
+    string += (langcode || '|||')
+    string += ' d'
+
+    string
   end
 
   def handle_ead_loc(finding_aid_status,ead_id)
@@ -57,7 +64,8 @@ class MARCModel < ASpaceExport::ExportModel
 
   end
 
-def handle_language(langcode)
+##currently also blocking 546
+def handle_languages(lang_materials)
   #blocks output of 041
 end
 
@@ -267,86 +275,91 @@ def handle_notes(notes)
 end
 end
 
-
-def handle_primary_creator(linked_agents)
-  link = linked_agents.find{|a| a['role'] == 'creator'}
-  return nil unless link
-  return nil unless link["_resolved"]["publish"] || @include_unpublished
-
-  creator = link['_resolved']
-  name = creator['display_name']
-
-  ind2 = ' '
-  role_info = link['relator'] && link['relator'].length == 3  ? ['4', link['relator']] : ['e', link['relator']]
-
-  case creator['agent_type']
-
-  when 'agent_corporate_entity'
-    code = '110'
-    ind1 = '2'
-    sfs = gather_agent_corporate_subfield_mappings(name, role_info, creator)
-
-  when 'agent_person'
-    ind1  = name['name_order'] == 'direct' ? '0' : '1'
-    code = '100'
-    sfs = gather_agent_person_subfield_mappings(name, role_info, creator)
-
-  when 'agent_family'
-    code = '100'
-    ind1 = '3'
-    sfs = gather_agent_family_subfield_mappings(name, role_info, creator)
-
-  end
-
-  df(code, ind1, ind2).with_sfs(*sfs)
-end
-
-# TODO: DRY this up
-# this method is very similair to handle_primary_creator and handle_agents
-def handle_other_creators(linked_agents)
-  creators = linked_agents.select{|a| a['role'] == 'creator'}[1..-1] || []
-  creators = creators + linked_agents.select{|a| a['role'] == 'source'}
-
-  creators.each do |link|
-    next unless link["_resolved"]["publish"] || @include_unpublished
+  def handle_primary_creator(linked_agents)
+    link = linked_agents.find {|a| a['role'] == 'creator'}
+    return nil unless link
+    return nil unless link["_resolved"]["publish"] || @include_unpublished
 
     creator = link['_resolved']
     name = creator['display_name']
-    relator = link['relator']
-    terms = link['terms']
-    role = link['role']
-
-    if role == 'source'
-      relator_sf =  ['e', 'former owner']
-    else
-      relator_sf = ['e', relator]
-    end
 
     ind2 = ' '
+
+    relator_sfs = []
+    if link['relator']
+      handle_relators(relator_sfs, link['relator'])
+    else
+      relator_sfs << ['e', 'creator']
+    end
 
     case creator['agent_type']
 
     when 'agent_corporate_entity'
-      code = '710'
+      code = '110'
       ind1 = '2'
-      sfs = gather_agent_corporate_subfield_mappings(name, relator_sf, creator)
-   
+      sfs = gather_agent_corporate_subfield_mappings(name, relator_sfs, creator)
+
     when 'agent_person'
       ind1  = name['name_order'] == 'direct' ? '0' : '1'
-      code = '700'
-      sfs = gather_agent_person_subfield_mappings(name, relator_sf, creator)
+      code = '100'
+      sfs = gather_agent_person_subfield_mappings(name, relator_sfs, creator)
 
     when 'agent_family'
+      code = '100'
       ind1 = '3'
-      code = '700'
-      sfs = gather_agent_family_subfield_mappings(name, relator_sf, creator)
+      sfs = gather_agent_family_subfield_mappings(name, relator_sfs, creator)
 
     end
 
     df(code, ind1, ind2).with_sfs(*sfs)
   end
-end
 
+  # TODO: DRY this up
+  # this method is very similair to handle_primary_creator and handle_agents
+  def handle_other_creators(linked_agents)
+    creators = linked_agents.select {|a| a['role'] == 'creator'}[1..-1] || []
+    creators = creators + linked_agents.select {|a| a['role'] == 'source'}
+
+    creators.each_with_index do |link, i|
+      next unless link["_resolved"]["publish"] || @include_unpublished
+
+      creator = link['_resolved']
+      name = creator['display_name']
+      role = link['role']
+
+      relator_sfs = []
+      if link['relator']
+        handle_relators(relator_sfs, link['relator'])
+      elsif role == 'source'
+        relator_sfs << ['e', 'former owner']
+      else
+        relator_sfs << ['e', 'creator']
+      end
+
+      ind2 = ' '
+
+      case creator['agent_type']
+
+      when 'agent_corporate_entity'
+        code = '710'
+        ind1 = '2'
+        sfs = gather_agent_corporate_subfield_mappings(name, relator_sfs, creator)
+
+      when 'agent_person'
+        ind1  = name['name_order'] == 'direct' ? '0' : '1'
+        code = '700'
+        sfs = gather_agent_person_subfield_mappings(name, relator_sfs, creator)
+
+      when 'agent_family'
+        ind1 = '3'
+        code = '700'
+        sfs = gather_agent_family_subfield_mappings(name, relator_sfs, creator)
+
+      end
+
+      df(code, ind1, ind2, i).with_sfs(*sfs)
+    end
+  end
 
 
 
